@@ -2,10 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {IERC721} from "../interfaces/IERC721.sol";
-import {Collateral} from "./Collateral.sol";
+import {CollateralFacet} from "./CollateralFacet.sol";
 import {LibDiamond} from "../libraries/LibDiamond.sol";
 
-contract RepaymentFacet is Collateral {
+contract RepaymentFacet is CollateralFacet {
     error InsufficientRepaymentAmount(uint256 totalRepayment);
     error OnlyBorrowerCanRepay();
     error LoanAlreadyRepaid();
@@ -19,9 +19,8 @@ contract RepaymentFacet is Collateral {
     /// @notice Allows the borrower to repay the loan with interest
     /// @param loanId The ID of the loan to repay
     function repayLoan(uint256 loanId) external payable {
-        LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-
-        LibDiamond.Loan memory loan = ds.loans[loanId];
+        LibDiamond.LoanStorage storage ls = LibDiamond.loanStorage();
+        LibDiamond.Loan memory loan = ls.loans[loanId];
 
         require(msg.sender == loan.borrower, OnlyBorrowerCanRepay());
         require(!loan.repaid, LoanAlreadyRepaid());

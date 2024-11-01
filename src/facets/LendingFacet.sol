@@ -2,10 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {console} from "../../lib/forge-std/src/console.sol";
-import {Collateral} from "./Collateral.sol";
+import {CollateralFacet} from "./CollateralFacet.sol";
 import {LibDiamond} from "../libraries/LibDiamond.sol";
 
-contract LendingFacet is Collateral {
+contract LendingFacet is CollateralFacet {
     error NFTIsCollateralized();
     error MaxLoanAmountExceeded(uint256 maxLoanAmount);
     error NotContractOwner();
@@ -30,14 +30,14 @@ contract LendingFacet is Collateral {
         uint256 loanAmount,
         uint256 loanDuration
     ) external payable {
-        LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
+        LibDiamond.LoanStorage storage ls = LibDiamond.loanStorage();
         require(
-            !ds.collateralizedNFTs[nftAddress][tokenId],
+            !ls.collateralizedNFTs[nftAddress][tokenId],
             NFTIsCollateralized()
         );
 
         uint256 nftValue = getNFTValue(nftAddress, tokenId);
-        uint256 maxLoanAmount = (nftValue * ds.ltvRatio) / 100;
+        uint256 maxLoanAmount = (nftValue * ls.ltvRatio) / 100;
         require(
             loanAmount <= maxLoanAmount,
             MaxLoanAmountExceeded(maxLoanAmount)
@@ -45,14 +45,14 @@ contract LendingFacet is Collateral {
 
         addCollateral(nftAddress, tokenId);
 
-        ds.loanCounter++;
-        ds.loans[ds.loanCounter] = LibDiamond.Loan({
+        ls.loanCounter++;
+        ls.loans[ls.loanCounter] = LibDiamond.Loan({
             borrower: msg.sender,
             lender: address(this),
             nftAddress: nftAddress,
             tokenId: tokenId,
             loanAmount: loanAmount,
-            interestRate: ds.interestRate,
+            interestRate: ls.interestRate,
             dueDate: block.timestamp + loanDuration,
             repaid: false
         });
@@ -61,11 +61,11 @@ contract LendingFacet is Collateral {
         payable(msg.sender).transfer(loanAmount);
 
         emit LoanRequested(
-            ds.loanCounter,
+            ls.loanCounter,
             msg.sender,
             address(this),
             loanAmount,
-            ds.interestRate,
+            ls.interestRate,
             block.timestamp + loanDuration
         );
     }
@@ -73,8 +73,8 @@ contract LendingFacet is Collateral {
     /// @notice Update the platform-wide interest rate for loans
     /// @param newInterestRate The new interest rate in basis points (e.g., 500 = 5%)
     function updateInterestRate(uint256 newInterestRate) external {
+        LibDiamond.enforceIsContractOwner();
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-        require(ds.contractOwner == msg.sender, NotContractOwner());
         ds.interestRate = newInterestRate;
         emit InterestRateUpdated(newInterestRate);
     }

@@ -35,8 +35,14 @@ library LibDiamond {
         bytes _calldata
     );
 
+    /**
+     * Storage Positions
+     */
     bytes32 constant DIAMOND_STORAGE_POSITION =
         keccak256("diamond.standard.diamond.storage");
+
+    bytes32 constant LOAN_STORAGE_POSITION =
+        keccak256("diamond.standard.loan.storage");
 
     struct FacetAddressAndPosition {
         address facetAddress;
@@ -72,9 +78,9 @@ library LibDiamond {
         mapping(bytes4 => bool) supportedInterfaces;
         // owner of the contract
         address contractOwner;
-        /**
-         * Loans
-         */
+    }
+
+    struct LoanStorage {
         mapping(uint256 => Loan) loans;
         uint256 loanCounter;
         uint256 ltvRatio; // Loan-to-Value ratio (e.g., 50 for 50%)
@@ -93,8 +99,14 @@ library LibDiamond {
         }
     }
 
+    function loanStorage() internal pure returns (LoanStorage storage ls) {
+        bytes32 position = LOAN_STORAGE_POSITION;
+        assembly {
+            ls.slot := position
+        }
+    }
+
     function setContractOwner(address _newOwner) internal {
-        enforceIsContractOwner();
         DiamondStorage storage ds = diamondStorage();
         address previousOwner = ds.contractOwner;
         ds.contractOwner = _newOwner;
@@ -105,9 +117,9 @@ library LibDiamond {
         uint256 _ltvRatio,
         uint256 _interestRate
     ) internal {
-        DiamondStorage storage ds = diamondStorage();
-        ds.ltvRatio = _ltvRatio;
-        ds.interestRate = _interestRate;
+        LoanStorage storage ls = loanStorage();
+        ls.ltvRatio = _ltvRatio;
+        ls.interestRate = _interestRate;
     }
 
     function contractOwner() internal view returns (address contractOwner_) {
