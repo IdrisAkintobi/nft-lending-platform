@@ -1,1 +1,1 @@
-forge fmt
+forge fmt && forge fmt --check
