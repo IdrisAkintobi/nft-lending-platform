@@ -2,12 +2,12 @@
 pragma solidity ^0.8.28;
 
 import {console} from "../../lib/forge-std/src/console.sol";
-import {CollateralFacet} from "./CollateralFacet.sol";
+import {Collateral} from "./Collateral.sol";
 import {LibDiamond} from "../libraries/LibDiamond.sol";
 
-contract LendingFacet {
-    error NFTNotCollateralized();
-    error InsufficientLoanAmountProvided();
+contract LendingFacet is Collateral {
+    error NFTIsCollateralized();
+    error MaxLoanAmountExceeded(uint256 maxLoanAmount);
     error NotContractOwner();
 
     event LoanRequested(
@@ -27,17 +27,23 @@ contract LendingFacet {
     function requestLoan(
         address nftAddress,
         uint256 tokenId,
+        uint256 loanAmount,
         uint256 loanDuration
     ) external payable {
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
         require(
-            ds.collateralizedNFTs[nftAddress][tokenId],
-            NFTNotCollateralized()
+            !ds.collateralizedNFTs[nftAddress][tokenId],
+            NFTIsCollateralized()
         );
 
         uint256 nftValue = getNFTValue(nftAddress, tokenId);
         uint256 maxLoanAmount = (nftValue * ds.ltvRatio) / 100;
-        require(msg.value >= maxLoanAmount, InsufficientLoanAmountProvided());
+        require(
+            loanAmount <= maxLoanAmount,
+            MaxLoanAmountExceeded(maxLoanAmount)
+        );
+
+        addCollateral(nftAddress, tokenId);
 
         ds.loanCounter++;
         ds.loans[ds.loanCounter] = LibDiamond.Loan({
@@ -45,20 +51,20 @@ contract LendingFacet {
             lender: address(this),
             nftAddress: nftAddress,
             tokenId: tokenId,
-            loanAmount: maxLoanAmount,
+            loanAmount: loanAmount,
             interestRate: ds.interestRate,
             dueDate: block.timestamp + loanDuration,
             repaid: false
         });
 
         // Transfer the loan amount to the borrower
-        payable(msg.sender).transfer(maxLoanAmount);
+        payable(msg.sender).transfer(loanAmount);
 
         emit LoanRequested(
             ds.loanCounter,
             msg.sender,
             address(this),
-            maxLoanAmount,
+            loanAmount,
             ds.interestRate,
             block.timestamp + loanDuration
         );
