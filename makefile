@@ -12,6 +12,9 @@ check:
 DeployDiamond: check
 	forge script script/DeployDiamond.s.sol --rpc-url holesky --account dev --broadcast --verify
 
+DeployMockNFT: check
+	forge script script/DeployMockNFT.s.sol --rpc-url holesky --account dev --broadcast --verify
+
 DeployDiamondLocal: check
 	forge script script/DeployDiamond.s.sol --rpc-url localhost --account foundry-local --broadcast
 

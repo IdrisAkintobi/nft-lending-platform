@@ -24,10 +24,7 @@ contract LendingFacet is Collateral {
     /// @param nftAddress The address of the NFT contract
     /// @param tokenId The token ID of the NFT
     /// @param loanDuration The duration of the loan
-    function requestLoan(address nftAddress, uint256 tokenId, uint256 loanAmount, uint256 loanDuration)
-        external
-        payable
-    {
+    function requestLoan(address nftAddress, uint256 tokenId, uint256 loanAmount, uint256 loanDuration) external {
         LibDiamond.LoanStorage storage ls = LibDiamond.loanStorage();
         require(!ls.collateralizedNFTs[nftAddress][tokenId], NFTIsCollateralized());
 

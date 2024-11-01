@@ -15,15 +15,6 @@ import { MockNFT } from "./mocks/MockNFT.sol";
 import { Collateral } from "../src/contracts/Collateral.sol";
 
 contract DiamondDeployerScript is DiamondUtils, Test {
-    //contract types of facets to be deployed
-    Diamond diamond;
-    DiamondCutFacet dCutFacet;
-    DiamondLoupeFacet dLoupe;
-    OwnershipFacet ownerF;
-    LendingFacet lendingF;
-    RepaymentFacet repaymentF;
-    MockNFT mockNFT;
-
     address owner = address(this);
     uint256 ltvRatio = 50;
     uint256 interestRate = 500; //50%
@@ -31,17 +22,19 @@ contract DiamondDeployerScript is DiamondUtils, Test {
     address borrower = 0x440Bcc7a1CF465EAFaBaE301D1D7739cbFe09dDA;
     uint256 tokenId = 1;
 
-    function setUp() public {
-        //deploy facets
-        dCutFacet = new DiamondCutFacet();
-        //uint256 _ltvRatio, uint256 _interestRate)
-        diamond = new Diamond(owner, address(dCutFacet), ltvRatio, interestRate);
-        dLoupe = new DiamondLoupeFacet();
-        ownerF = new OwnershipFacet();
-        lendingF = new LendingFacet();
-        repaymentF = new RepaymentFacet();
-        mockNFT = new MockNFT();
+    //deploy facets
+    DiamondCutFacet dCutFacet = new DiamondCutFacet();
+    //uint256 _ltvRatio, uint256 _interestRate)
+    Diamond diamond = new Diamond(owner, address(dCutFacet), ltvRatio, interestRate);
+    DiamondLoupeFacet dLoupe = new DiamondLoupeFacet();
+    OwnershipFacet ownerF = new OwnershipFacet();
+    LendingFacet lendingF = new LendingFacet();
+    RepaymentFacet repaymentF = new RepaymentFacet();
+    MockNFT mockNFT = new MockNFT();
 
+    bool setUpInitialized;
+
+    function setUp() public {
         //upgrade diamond with facets
         //build cut struct
         IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](4);
@@ -137,16 +130,14 @@ contract DiamondDeployerScript is DiamondUtils, Test {
 
     function test_Repayment() public {
         uint256 loanId = 1;
-        uint256 repaymentAmount = 8 ether;
+        uint256 repaymentAmount = 5.25 ether;
 
         //Fund borrower with repaymentAmount
         vm.deal(borrower, repaymentAmount);
 
         bytes memory _calldata = abi.encodeWithSelector(RepaymentFacet.repayLoan.selector, loanId);
 
-        // Request Loan
         test_LoanRequest();
-
         vm.prank(borrower);
         (bool success,) = (address(diamond)).call{ value: repaymentAmount }(_calldata);
         assertTrue(success);
