@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {IERC721} from "../interfaces/IERC721.sol";
-import {LibDiamond} from "../libraries/LibDiamond.sol";
+import { IERC721 } from "../interfaces/IERC721.sol";
+import { LibDiamond } from "../libraries/LibDiamond.sol";
 
 contract CollateralFacet {
     error NotCollateralized();
@@ -17,10 +17,7 @@ contract CollateralFacet {
 
     function removeCollateral(address nftAddress, uint256 tokenId) internal {
         LibDiamond.LoanStorage storage ls = LibDiamond.loanStorage();
-        require(
-            ls.collateralizedNFTs[nftAddress][tokenId],
-            NotCollateralized()
-        );
+        require(ls.collateralizedNFTs[nftAddress][tokenId], NotCollateralized());
         ls.collateralizedNFTs[nftAddress][tokenId] = false;
         IERC721(nftAddress).transferFrom(address(this), msg.sender, tokenId);
     }

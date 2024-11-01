@@ -1,16 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {LibDiamond} from "./libraries/LibDiamond.sol";
-import {IDiamondCut} from "./interfaces/IDiamondCut.sol";
+import { LibDiamond } from "./libraries/LibDiamond.sol";
+import { IDiamondCut } from "./interfaces/IDiamondCut.sol";
 
 contract Diamond {
-    constructor(
-        address _contractOwner,
-        address _diamondCutFacet,
-        uint256 _ltvRatio,
-        uint256 _interestRate
-    ) payable {
+    constructor(address _contractOwner, address _diamondCutFacet, uint256 _ltvRatio, uint256 _interestRate) payable {
         LibDiamond.setContractOwner(_contractOwner);
         LibDiamond.setLendingDetails(_ltvRatio, _interestRate);
 
@@ -43,12 +38,8 @@ contract Diamond {
             returndatacopy(0, 0, returndatasize())
             // return any return value or error back to the caller
             switch result
-            case 0 {
-                revert(0, returndatasize())
-            }
-            default {
-                return(0, returndatasize())
-            }
+            case 0 { revert(0, returndatasize()) }
+            default { return(0, returndatasize()) }
         }
     }
 
@@ -57,5 +48,5 @@ contract Diamond {
         return "THIS IS AN EXAMPLE OF AN IMMUTABLE FUNCTION";
     }
 
-    receive() external payable {}
+    receive() external payable { }
 }

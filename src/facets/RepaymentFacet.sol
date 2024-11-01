@@ -1,20 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {IERC721} from "../interfaces/IERC721.sol";
-import {CollateralFacet} from "./CollateralFacet.sol";
-import {LibDiamond} from "../libraries/LibDiamond.sol";
+import { IERC721 } from "../interfaces/IERC721.sol";
+import { CollateralFacet } from "./CollateralFacet.sol";
+import { LibDiamond } from "../libraries/LibDiamond.sol";
 
 contract RepaymentFacet is CollateralFacet {
     error InsufficientRepaymentAmount(uint256 totalRepayment);
     error OnlyBorrowerCanRepay();
     error LoanAlreadyRepaid();
 
-    event LoanRepaid(
-        uint256 loanId,
-        address indexed borrower,
-        uint256 amountPaid
-    );
+    event LoanRepaid(uint256 loanId, address indexed borrower, uint256 amountPaid);
 
     /// @notice Allows the borrower to repay the loan with interest
     /// @param loanId The ID of the loan to repay
@@ -28,10 +24,7 @@ contract RepaymentFacet is CollateralFacet {
         uint256 interestAmount = (loan.loanAmount * loan.interestRate) / 10000; // Interest calculation in basis points
         uint256 totalRepayment = loan.loanAmount + interestAmount;
 
-        require(
-            msg.value >= totalRepayment,
-            InsufficientRepaymentAmount(totalRepayment)
-        );
+        require(msg.value >= totalRepayment, InsufficientRepaymentAmount(totalRepayment));
 
         // Mark the loan as repaid in the LendingFacet
         loan.repaid = true;

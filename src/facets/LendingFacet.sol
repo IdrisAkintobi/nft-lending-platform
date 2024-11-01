@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {console} from "../../lib/forge-std/src/console.sol";
-import {CollateralFacet} from "./CollateralFacet.sol";
-import {LibDiamond} from "../libraries/LibDiamond.sol";
+import { console } from "../../lib/forge-std/src/console.sol";
+import { CollateralFacet } from "./CollateralFacet.sol";
+import { LibDiamond } from "../libraries/LibDiamond.sol";
 
 contract LendingFacet is CollateralFacet {
     error NFTIsCollateralized();
@@ -24,24 +24,16 @@ contract LendingFacet is CollateralFacet {
     /// @param nftAddress The address of the NFT contract
     /// @param tokenId The token ID of the NFT
     /// @param loanDuration The duration of the loan
-    function requestLoan(
-        address nftAddress,
-        uint256 tokenId,
-        uint256 loanAmount,
-        uint256 loanDuration
-    ) external payable {
+    function requestLoan(address nftAddress, uint256 tokenId, uint256 loanAmount, uint256 loanDuration)
+        external
+        payable
+    {
         LibDiamond.LoanStorage storage ls = LibDiamond.loanStorage();
-        require(
-            !ls.collateralizedNFTs[nftAddress][tokenId],
-            NFTIsCollateralized()
-        );
+        require(!ls.collateralizedNFTs[nftAddress][tokenId], NFTIsCollateralized());
 
         uint256 nftValue = _getNFTValue(nftAddress, tokenId);
         uint256 maxLoanAmount = (nftValue * ls.ltvRatio) / 100;
-        require(
-            loanAmount <= maxLoanAmount,
-            MaxLoanAmountExceeded(maxLoanAmount)
-        );
+        require(loanAmount <= maxLoanAmount, MaxLoanAmountExceeded(maxLoanAmount));
 
         addCollateral(nftAddress, tokenId);
 
@@ -61,12 +53,7 @@ contract LendingFacet is CollateralFacet {
         payable(msg.sender).transfer(loanAmount);
 
         emit LoanRequested(
-            ls.loanCounter,
-            msg.sender,
-            address(this),
-            loanAmount,
-            ls.interestRate,
-            block.timestamp + loanDuration
+            ls.loanCounter, msg.sender, address(this), loanAmount, ls.interestRate, block.timestamp + loanDuration
         );
     }
 
@@ -83,10 +70,7 @@ contract LendingFacet is CollateralFacet {
     /// @dev Should be replace with a call to a marketplace API, oracle, or other appraisal model
     /// @param nftAddress The address of the NFT contract
     /// @param tokenId The token ID of the NFT
-    function _getNFTValue(
-        address nftAddress,
-        uint256 tokenId
-    ) private pure returns (uint256) {
+    function _getNFTValue(address nftAddress, uint256 tokenId) private pure returns (uint256) {
         // Placeholder: In production, replace with actual valuation logic
         // E.g., query from Chainlink oracle, floor price, or use peer-to-peer negotiation.
         console.log(nftAddress, tokenId);
@@ -96,10 +80,7 @@ contract LendingFacet is CollateralFacet {
     /// @notice function to get the amout of loan for NFT
     /// @param nftAddress The address of the NFT contract
     /// @param tokenId The token ID of the NFT
-    function getNFTLoanWorth(
-        address nftAddress,
-        uint256 tokenId
-    ) external view returns (uint256 maxLoanAmount) {
+    function getNFTLoanWorth(address nftAddress, uint256 tokenId) external view returns (uint256 maxLoanAmount) {
         uint256 nftValue = _getNFTValue(nftAddress, tokenId);
         LibDiamond.LoanStorage storage ls = LibDiamond.loanStorage();
         maxLoanAmount = (nftValue * ls.ltvRatio) / 100;
