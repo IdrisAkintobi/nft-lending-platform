@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity 0.8.28;
 
 import {console} from "../../lib/forge-std/src/console.sol";
 import {CollateralFacet} from "./CollateralFacet.sol";
@@ -36,7 +36,7 @@ contract LendingFacet is CollateralFacet {
             NFTIsCollateralized()
         );
 
-        uint256 nftValue = getNFTValue(nftAddress, tokenId);
+        uint256 nftValue = _getNFTValue(nftAddress, tokenId);
         uint256 maxLoanAmount = (nftValue * ls.ltvRatio) / 100;
         require(
             loanAmount <= maxLoanAmount,
@@ -74,20 +74,34 @@ contract LendingFacet is CollateralFacet {
     /// @param newInterestRate The new interest rate in basis points (e.g., 500 = 5%)
     function updateInterestRate(uint256 newInterestRate) external {
         LibDiamond.enforceIsContractOwner();
-        LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-        ds.interestRate = newInterestRate;
+        LibDiamond.LoanStorage storage ls = LibDiamond.loanStorage();
+        ls.interestRate = newInterestRate;
         emit InterestRateUpdated(newInterestRate);
     }
 
     /// @notice Placeholder function for NFT valuation
     /// @dev Should be replace with a call to a marketplace API, oracle, or other appraisal model
-    function getNFTValue(
+    /// @param nftAddress The address of the NFT contract
+    /// @param tokenId The token ID of the NFT
+    function _getNFTValue(
         address nftAddress,
         uint256 tokenId
-    ) internal pure returns (uint256) {
+    ) private pure returns (uint256) {
         // Placeholder: In production, replace with actual valuation logic
         // E.g., query from Chainlink oracle, floor price, or use peer-to-peer negotiation.
         console.log(nftAddress, tokenId);
         return 10 ether; // Dummy value
+    }
+
+    /// @notice function to get the amout of loan for NFT
+    /// @param nftAddress The address of the NFT contract
+    /// @param tokenId The token ID of the NFT
+    function getNFTLoanWorth(
+        address nftAddress,
+        uint256 tokenId
+    ) external view returns (uint256 maxLoanAmount) {
+        uint256 nftValue = _getNFTValue(nftAddress, tokenId);
+        LibDiamond.LoanStorage storage ls = LibDiamond.loanStorage();
+        maxLoanAmount = (nftValue * ls.ltvRatio) / 100;
     }
 }
