@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { IERC721 } from "../interfaces/IERC721.sol";
-import { Collateral } from "./Collateral.sol";
+import { Collateral } from "../contracts/Collateral.sol";
 import { LibDiamond } from "../libraries/LibDiamond.sol";
 
 contract RepaymentFacet is Collateral {

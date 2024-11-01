@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import { IDiamondCut } from "../src/interfaces/IDiamondCut.sol";
+import { IERC721 } from "../src/interfaces/IERC721.sol";
 import { DiamondCutFacet } from "../src/facets/DiamondCutFacet.sol";
 import { DiamondLoupeFacet } from "../src/facets/DiamondLoupeFacet.sol";
 import { OwnershipFacet } from "../src/facets/OwnershipFacet.sol";
@@ -10,6 +11,8 @@ import { RepaymentFacet } from "../src/facets/RepaymentFacet.sol";
 import { Diamond } from "../src/Diamond.sol";
 import { DiamondUtils } from "../script/helpers/DiamondUtils.sol";
 import { Test, console } from "forge-std/Test.sol";
+import { MockNFT } from "./mocks/MockNFT.sol";
+import { Collateral } from "../src/contracts/Collateral.sol";
 
 contract DiamondDeployerScript is DiamondUtils, Test {
     //contract types of facets to be deployed
@@ -19,10 +22,14 @@ contract DiamondDeployerScript is DiamondUtils, Test {
     OwnershipFacet ownerF;
     LendingFacet lendingF;
     RepaymentFacet repaymentF;
+    MockNFT mockNFT;
 
     address owner = address(this);
     uint256 ltvRatio = 50;
     uint256 interestRate = 500; //50%
+
+    address borrower = 0x440Bcc7a1CF465EAFaBaE301D1D7739cbFe09dDA;
+    uint256 tokenId = 1;
 
     function setUp() public {
         //deploy facets
@@ -33,6 +40,7 @@ contract DiamondDeployerScript is DiamondUtils, Test {
         ownerF = new OwnershipFacet();
         lendingF = new LendingFacet();
         repaymentF = new RepaymentFacet();
+        mockNFT = new MockNFT();
 
         //upgrade diamond with facets
         //build cut struct
@@ -72,10 +80,75 @@ contract DiamondDeployerScript is DiamondUtils, Test {
 
         //upgrade diamond
         IDiamondCut(address(diamond)).diamondCut(cut, address(0x0), "");
+
+        //load Diamond with 100 ethers
+        vm.deal(address(diamond), 100 ether);
     }
 
-    function testDeployDiamond() public view {
+    function test_DeployDiamond() public view {
         //call a function
         DiamondLoupeFacet(address(diamond)).facetAddresses();
+    }
+
+    function test_LoanRequest() public {
+        uint256 loanAmount = 5 ether;
+        uint256 loanDuration = 60 * 60 * 24 * 30; //30 days
+
+        //Mint token 1 to user
+        IERC721(mockNFT).mint(borrower, tokenId);
+
+        bytes memory _calldata = abi.encodeWithSelector(
+            LendingFacet.requestLoan.selector, address(mockNFT), tokenId, loanAmount, loanDuration
+        );
+
+        vm.prank(borrower);
+        (bool success,) = (address(diamond)).call(_calldata);
+        assertTrue(success);
+    }
+
+    function test_Multiple_LoanRequest() public {
+        uint256 loanAmount = 1 ether;
+        uint256 loanDuration = 60 * 60 * 24 * 30; //30 days
+
+        bytes memory _calldata = abi.encodeWithSelector(
+            LendingFacet.requestLoan.selector, address(mockNFT), tokenId, loanAmount, loanDuration
+        );
+
+        vm.expectRevert(Collateral.NotOwner.selector);
+        vm.prank(borrower);
+        (bool success,) = (address(diamond)).call(_calldata);
+        assertTrue(success);
+    }
+
+    function test_MaxLoanAmount() public {
+        uint256 loanAmount = 15 ether;
+        uint256 loanDuration = 60 * 60 * 24 * 30; //30 days
+
+        bytes memory _calldata = abi.encodeWithSelector(
+            LendingFacet.requestLoan.selector, address(mockNFT), tokenId, loanAmount, loanDuration
+        );
+
+        bytes4 errorSelector = bytes4(keccak256("MaxLoanAmountExceeded(uint256)"));
+        vm.expectRevert(abi.encodeWithSelector(errorSelector, 5 ether));
+        vm.prank(borrower);
+        (bool success,) = (address(diamond)).call(_calldata);
+        assertTrue(success);
+    }
+
+    function test_Repayment() public {
+        uint256 loanId = 1;
+        uint256 repaymentAmount = 8 ether;
+
+        //Fund borrower with repaymentAmount
+        vm.deal(borrower, repaymentAmount);
+
+        bytes memory _calldata = abi.encodeWithSelector(RepaymentFacet.repayLoan.selector, loanId);
+
+        // Request Loan
+        test_LoanRequest();
+
+        vm.prank(borrower);
+        (bool success,) = (address(diamond)).call{ value: repaymentAmount }(_calldata);
+        assertTrue(success);
     }
 }

@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import { console } from "../../lib/forge-std/src/console.sol";
-import { Collateral } from "./Collateral.sol";
+import { Collateral } from "../contracts/Collateral.sol";
 import { LibDiamond } from "../libraries/LibDiamond.sol";
 
 contract LendingFacet is Collateral {
