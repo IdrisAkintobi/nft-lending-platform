@@ -2,10 +2,10 @@
 pragma solidity 0.8.28;
 
 import { console } from "../../lib/forge-std/src/console.sol";
-import { CollateralFacet } from "./CollateralFacet.sol";
+import { Collateral } from "./Collateral.sol";
 import { LibDiamond } from "../libraries/LibDiamond.sol";
 
-contract LendingFacet is CollateralFacet {
+contract LendingFacet is Collateral {
     error NFTIsCollateralized();
     error MaxLoanAmountExceeded(uint256 maxLoanAmount);
     error NotContractOwner();

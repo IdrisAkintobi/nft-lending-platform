@@ -2,10 +2,10 @@
 pragma solidity 0.8.28;
 
 import { IERC721 } from "../interfaces/IERC721.sol";
-import { CollateralFacet } from "./CollateralFacet.sol";
+import { Collateral } from "./Collateral.sol";
 import { LibDiamond } from "../libraries/LibDiamond.sol";
 
-contract RepaymentFacet is CollateralFacet {
+contract RepaymentFacet is Collateral {
     error InsufficientRepaymentAmount(uint256 totalRepayment);
     error OnlyBorrowerCanRepay();
     error LoanAlreadyRepaid();

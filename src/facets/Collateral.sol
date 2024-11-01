@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 import { IERC721 } from "../interfaces/IERC721.sol";
 import { LibDiamond } from "../libraries/LibDiamond.sol";
 
-contract CollateralFacet {
+contract Collateral {
     error NotCollateralized();
     error NotOwner();
 
