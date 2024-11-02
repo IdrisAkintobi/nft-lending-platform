@@ -8,7 +8,6 @@ import { LibDiamond } from "../libraries/LibDiamond.sol";
 contract LendingFacet is Collateral {
     error NFTIsCollateralized();
     error MaxLoanAmountExceeded(uint256 maxLoanAmount);
-    error NotContractOwner();
 
     event LoanRequested(
         uint256 indexed loanId,

@@ -13,6 +13,7 @@ import { DiamondUtils } from "../script/helpers/DiamondUtils.sol";
 import { Test, console } from "forge-std/Test.sol";
 import { MockNFT } from "./mocks/MockNFT.sol";
 import { Collateral } from "../src/contracts/Collateral.sol";
+import { LibDiamond } from "../src/libraries/LibDiamond.sol";
 
 contract DiamondDeployerScript is DiamondUtils, Test {
     address owner = address(this);
@@ -23,18 +24,29 @@ contract DiamondDeployerScript is DiamondUtils, Test {
     uint256 tokenId = 1;
 
     //deploy facets
-    DiamondCutFacet dCutFacet = new DiamondCutFacet();
+    DiamondCutFacet dCutFacet;
     //uint256 _ltvRatio, uint256 _interestRate)
-    Diamond diamond = new Diamond(owner, address(dCutFacet), ltvRatio, interestRate);
-    DiamondLoupeFacet dLoupe = new DiamondLoupeFacet();
-    OwnershipFacet ownerF = new OwnershipFacet();
-    LendingFacet lendingF = new LendingFacet();
-    RepaymentFacet repaymentF = new RepaymentFacet();
-    MockNFT mockNFT = new MockNFT();
+    Diamond diamond;
+    DiamondLoupeFacet dLoupe;
+    OwnershipFacet ownerF;
+    LendingFacet lendingF;
+    RepaymentFacet repaymentF;
+    MockNFT mockNFT;
 
-    bool setUpInitialized;
+    constructor() {
+        init();
+    }
 
-    function setUp() public {
+    function init() public {
+        //Deploy contracts
+        dCutFacet = new DiamondCutFacet();
+        diamond = new Diamond(owner, address(dCutFacet), ltvRatio, interestRate);
+        dLoupe = new DiamondLoupeFacet();
+        ownerF = new OwnershipFacet();
+        lendingF = new LendingFacet();
+        repaymentF = new RepaymentFacet();
+        mockNFT = new MockNFT();
+
         //upgrade diamond with facets
         //build cut struct
         IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](4);
@@ -76,6 +88,9 @@ contract DiamondDeployerScript is DiamondUtils, Test {
 
         //load Diamond with 100 ethers
         vm.deal(address(diamond), 100 ether);
+
+        //Mint token 1 to user
+        IERC721(mockNFT).mint(borrower, tokenId);
     }
 
     function test_DeployDiamond() public view {
@@ -87,30 +102,36 @@ contract DiamondDeployerScript is DiamondUtils, Test {
         uint256 loanAmount = 5 ether;
         uint256 loanDuration = 60 * 60 * 24 * 30; //30 days
 
-        //Mint token 1 to user
-        IERC721(mockNFT).mint(borrower, tokenId);
-
         bytes memory _calldata = abi.encodeWithSelector(
             LendingFacet.requestLoan.selector, address(mockNFT), tokenId, loanAmount, loanDuration
         );
 
-        vm.prank(borrower);
+        vm.startPrank(borrower);
         (bool success,) = (address(diamond)).call(_calldata);
         assertTrue(success);
+
+        LibDiamond.Loan memory loan = RepaymentFacet(address(diamond)).viewLoan(1);
+        vm.stopPrank();
+
+        assertEq(loan.borrower, borrower);
+        assertEq(loan.loanAmount, loanAmount);
+        assertEq(loan.tokenId, tokenId);
+        assertGt(loan.dueDate, block.timestamp);
+        assertEq(mockNFT.ownerOf(1), address(diamond));
     }
 
     function test_Multiple_LoanRequest() public {
+        //Request loan
+        test_LoanRequest();
+
+        //Attempt to request loan again
         uint256 loanAmount = 1 ether;
         uint256 loanDuration = 60 * 60 * 24 * 30; //30 days
 
-        bytes memory _calldata = abi.encodeWithSelector(
-            LendingFacet.requestLoan.selector, address(mockNFT), tokenId, loanAmount, loanDuration
-        );
-
-        vm.expectRevert(Collateral.NotOwner.selector);
+        vm.expectRevert(LendingFacet.NFTIsCollateralized.selector);
         vm.prank(borrower);
-        (bool success,) = (address(diamond)).call(_calldata);
-        assertTrue(success);
+
+        LendingFacet(address(diamond)).requestLoan(address(mockNFT), tokenId, loanAmount, loanDuration);
     }
 
     function test_MaxLoanAmount() public {
@@ -135,11 +156,22 @@ contract DiamondDeployerScript is DiamondUtils, Test {
         //Fund borrower with repaymentAmount
         vm.deal(borrower, repaymentAmount);
 
+        //Token belong to borrower
+        assertEq(mockNFT.ownerOf(1), borrower);
+
+        //Make loan request
+        test_LoanRequest();
+
+        //Token transfered to contract
+        assertEq(mockNFT.ownerOf(1), address(diamond));
+
         bytes memory _calldata = abi.encodeWithSelector(RepaymentFacet.repayLoan.selector, loanId);
 
-        test_LoanRequest();
         vm.prank(borrower);
         (bool success,) = (address(diamond)).call{ value: repaymentAmount }(_calldata);
         assertTrue(success);
+
+        //Token returned to borrower
+        assertEq(mockNFT.ownerOf(1), borrower);
     }
 }
