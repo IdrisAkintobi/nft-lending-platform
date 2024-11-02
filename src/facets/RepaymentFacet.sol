@@ -10,22 +10,25 @@ contract RepaymentFacet is Collateral {
     error YouCanOnlyViewYourLoan();
     error LoanAlreadyRepaid();
 
-    event LoanRepaid(uint256 loanId, address indexed borrower, uint256 amountPaid);
+    event LoanRepaid(uint256 indexed loanId, address indexed borrower, uint256 amountPaid);
 
     /// @notice Allows the borrower to repay the loan with interest
     /// @param loanId The ID of the loan to repay
     function repayLoan(uint256 loanId) external payable {
         LibDiamond.LoanStorage storage ls = LibDiamond.loanStorage();
 
-        require(msg.sender == ls.loans[loanId].borrower, OnlyBorrowerCanRepay());
+        address borrower = ls.loans[loanId].borrower;
+        uint256 loanAmount = ls.loans[loanId].loanAmount;
+
+        require(msg.sender == borrower, OnlyBorrowerCanRepay());
         require(!ls.loans[loanId].repaid, LoanAlreadyRepaid());
 
-        uint256 interestAmount = (ls.loans[loanId].loanAmount * ls.loans[loanId].interestRate) / 10000;
-        uint256 totalRepayment = ls.loans[loanId].loanAmount + interestAmount;
+        uint256 interestAmount = (loanAmount * ls.loans[loanId].interestRate) / 10000;
+        uint256 totalRepayment = loanAmount + interestAmount;
 
         require(msg.value >= totalRepayment, InsufficientRepaymentAmount(totalRepayment));
 
-        ls.loans[loanId].repaid = true; // Directly modifies storage
+        ls.loans[loanId].repaid = true;
 
         // Return excess payment if overpaid
         if (msg.value > totalRepayment) {
@@ -35,7 +38,7 @@ contract RepaymentFacet is Collateral {
         // Transfer the NFT collateral back to the borrower
         removeCollateral(ls.loans[loanId].nftAddress, ls.loans[loanId].tokenId);
 
-        emit LoanRepaid(loanId, ls.loans[loanId].borrower, totalRepayment);
+        emit LoanRepaid(loanId, borrower, totalRepayment);
     }
 
     /// @notice Allows the borrower to view their loan
