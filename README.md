@@ -84,6 +84,11 @@ The **RepaymentFacet** enables borrowers to repay their loans and receive their 
 
 ## Functions
 
+### DIAGRAM
+
+![NFT-Lending-Platform.png](https://github.com/user-attachments/assets/e3f12508-6c18-420f-844b-a4b796a6e419)
+
+
 ### LendingFacet
 
 1. **requestLoan**
@@ -162,4 +167,4 @@ forge test
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the [MIT License](LICENSE).
