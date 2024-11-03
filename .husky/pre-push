@@ -1,1 +1,1 @@
-forge build --sizes && forge test
+forge build --sizes && forge test --gas-report && forge coverage

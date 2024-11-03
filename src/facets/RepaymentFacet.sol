@@ -17,13 +17,15 @@ contract RepaymentFacet is Collateral {
     function repayLoan(uint256 loanId) external payable {
         LibDiamond.LoanStorage storage ls = LibDiamond.loanStorage();
 
-        address borrower = ls.loans[loanId].borrower;
-        uint256 loanAmount = ls.loans[loanId].loanAmount;
+        LibDiamond.Loan memory loan = ls.loans[loanId];
+
+        address borrower = loan.borrower;
+        uint256 loanAmount = loan.loanAmount;
 
         require(msg.sender == borrower, OnlyBorrowerCanRepay());
-        require(!ls.loans[loanId].repaid, LoanAlreadyRepaid());
+        require(!loan.repaid, LoanAlreadyRepaid());
 
-        uint256 interestAmount = (loanAmount * ls.loans[loanId].interestRate) / 10000;
+        uint256 interestAmount = (loanAmount * loan.interestRate) / 10000;
         uint256 totalRepayment = loanAmount + interestAmount;
 
         require(msg.value >= totalRepayment, InsufficientRepaymentAmount(totalRepayment));
@@ -36,7 +38,7 @@ contract RepaymentFacet is Collateral {
         }
 
         // Transfer the NFT collateral back to the borrower
-        removeCollateral(ls.loans[loanId].nftAddress, ls.loans[loanId].tokenId);
+        removeCollateral(loan.nftAddress, loan.tokenId);
 
         emit LoanRepaid(loanId, borrower, totalRepayment);
     }

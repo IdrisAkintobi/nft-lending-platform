@@ -7,6 +7,8 @@ export $(shell sed 's/=.*//' .env)
 check:
 	forge fmt
 	forge build --sizes
+	forge test --gas-report
+	forge coverage
 
 # Deployment targets
 DeployDiamond: check
